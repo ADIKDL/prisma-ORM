@@ -32,6 +32,49 @@ app.get("/users", async (req, res) => {
 	res.json(users);
 });
 
+/* GET ALL USERS WITH PAGINATION */
+
+/* GET ALL USERS WITH PAGINATION */
+app.get("/users-pagination", async (req, res) => {
+	try {
+		const { page = 1, limit = 10, email } = req.query;
+
+		const skip = (Number(page) - 1) * Number(limit);
+
+		// Build filter dynamically
+		const where = {};
+
+		if (email) {
+			where.email = {
+				contains: email,
+				mode: "insensitive", // case-insensitive search
+			};
+		}
+
+		const [users, total] = await Promise.all([
+			prisma.user.findMany({
+				where,
+				skip,
+				take: Number(limit),
+				orderBy: { createdAt: "desc" },
+			}),
+			prisma.user.count({ where }),
+		]);
+
+		res.json({
+			data: users,
+			meta: {
+				total,
+				page: Number(page),
+				limit: Number(limit),
+				totalPages: Math.ceil(total / limit),
+			},
+		});
+	} catch (error) {
+		res.status(500).json({ error: error.message });
+	}
+});
+
 /* GET USER BY ID */
 app.get("/users/:id", async (req, res) => {
 	try {
